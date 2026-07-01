@@ -12,6 +12,7 @@ const appState = {
   selectedSlot: null,
   modalSlot: null,
   timerId: null,
+  lastTickAt: null,
   youtubeReady: false
 };
 
@@ -553,14 +554,18 @@ function playAll() {
     slot.player.playVideo();
   });
   appState.isPlaying = true;
+  appState.lastTickAt = Date.now();
   updateAllUi();
 }
 
 function pauseAll() {
+  syncReviewTimeFromFirstReadyPlayer();
   eachReadyPlayer((slot) => {
     slot.player.pauseVideo();
   });
   appState.isPlaying = false;
+  appState.lastTickAt = null;
+  elements.reviewTimeInput.value = formatTime(appState.reviewTime);
   updateAllUi();
 }
 
@@ -587,6 +592,7 @@ function resyncAll() {
   eachReadyPlayer((slot) => {
     seekSlotToReviewTime(slot);
   });
+  appState.lastTickAt = appState.isPlaying ? Date.now() : null;
   updateAllUi();
 }
 
@@ -683,11 +689,28 @@ function eachReadyPlayer(callback) {
 function startClock() {
   appState.timerId = window.setInterval(() => {
     if (appState.isPlaying) {
-      appState.reviewTime += 1;
+      const now = Date.now();
+      if (appState.lastTickAt === null) {
+        appState.lastTickAt = now;
+      }
+      const elapsedSeconds = (now - appState.lastTickAt) / 1000;
+      appState.reviewTime += elapsedSeconds * appState.rate;
+      appState.lastTickAt = now;
       elements.reviewTimeInput.value = formatTime(appState.reviewTime);
     }
     updateAllUi();
   }, 1000);
+}
+
+function syncReviewTimeFromFirstReadyPlayer() {
+  const firstReady = appState.slots.find((slot) => slot.ready && slot.player && typeof slot.player.getCurrentTime === "function");
+  if (!firstReady) {
+    return;
+  }
+  const current = firstReady.player.getCurrentTime();
+  if (Number.isFinite(current)) {
+    appState.reviewTime = Math.max(0, current - firstReady.startSeconds);
+  }
 }
 
 function updateAllUi() {
