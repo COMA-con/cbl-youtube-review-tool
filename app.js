@@ -135,6 +135,13 @@ function bindSlotEvents(slot) {
       toggleModal(slot.index);
     }
   });
+
+  slot.card.addEventListener("click", (event) => {
+    const interactive = event.target.closest("button, input, select, textarea, label, iframe");
+    if (!interactive && slot.videoId) {
+      toggleModal(slot.index);
+    }
+  });
 }
 
 function bindGlobalEvents() {
@@ -336,7 +343,9 @@ function importJsonFile(event) {
 function createShareLink() {
   const json = JSON.stringify(collectSettings());
   const encoded = encodeBase64Unicode(json);
-  const baseUrl = `${window.location.origin}${window.location.pathname}`;
+  const baseUrl = window.location.protocol === "file:"
+    ? window.location.href.split("#")[0]
+    : `${window.location.origin}${window.location.pathname}`;
   const shareUrl = `${baseUrl}#${SHARE_HASH_PREFIX}${encoded}`;
   elements.jsonOutput.value = shareUrl;
 
