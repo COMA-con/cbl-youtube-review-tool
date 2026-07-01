@@ -489,9 +489,10 @@ function createOrUpdatePlayer(index) {
   }
 
   if (slot.player) {
-    slot.status = "読み込み中";
-    slot.ready = false;
-    slot.player.loadVideoById({
+    slot.status = "読み込み済み";
+    slot.ready = true;
+    const loadMethod = appState.isPlaying ? "loadVideoById" : "cueVideoById";
+    slot.player[loadMethod]({
       videoId: slot.videoId,
       startSeconds: slot.startSeconds + appState.reviewTime
     });
