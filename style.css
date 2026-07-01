@@ -26,6 +26,10 @@ body {
   line-height: 1.5;
 }
 
+body.is-reviewing {
+  overflow: hidden;
+}
+
 button,
 input,
 select,
@@ -129,6 +133,29 @@ label {
 
 main {
   padding: 16px;
+}
+
+.mode-panel {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 12px;
+  box-shadow: 0 2px 10px rgba(24, 39, 57, 0.05);
+}
+
+.mode-panel h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.mode-panel p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .toolbar,
@@ -297,6 +324,10 @@ main {
   display: none;
 }
 
+.review-overlays {
+  display: none;
+}
+
 .card-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -401,6 +432,202 @@ main {
   color: var(--ok);
 }
 
+.review-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 8px;
+  width: 100vw;
+  height: 100vh;
+  background: #080d13;
+  color: #fff;
+  padding: 8px;
+}
+
+.review-mode[hidden] {
+  display: none;
+}
+
+.review-toolbar {
+  position: relative;
+  z-index: 12;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(13, 21, 31, 0.9);
+  padding: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.review-mode.controls-hidden .review-toolbar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+}
+
+.review-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+
+.review-toolbar strong {
+  min-width: 82px;
+  font-size: 18px;
+}
+
+.review-toolbar span {
+  color: #c9d6e2;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.review-toolbar label {
+  display: inline-flex;
+  color: #c9d6e2;
+}
+
+.review-toolbar input {
+  width: 110px;
+}
+
+.review-toolbar select {
+  width: 92px;
+}
+
+.review-toolbar button {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
+.review-grid {
+  --review-cols: 1;
+  --review-tile-width: 100%;
+  --review-tile-height: auto;
+  display: grid;
+  grid-template-columns: repeat(var(--review-cols), var(--review-tile-width));
+  grid-auto-rows: var(--review-tile-height);
+  justify-content: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.review-grid .video-card {
+  width: var(--review-tile-width);
+  height: var(--review-tile-height);
+  min-height: 0;
+  border: 0;
+  border-radius: 4px;
+  background: #080d13;
+  padding: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.review-grid .video-card.is-selected {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.72);
+}
+
+.review-grid .card-head,
+.review-grid .video-card > label,
+.review-grid .inline-fields,
+.review-grid .card-actions,
+.review-grid .status-grid {
+  display: none;
+}
+
+.review-grid .player-shell {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  aspect-ratio: auto;
+}
+
+.review-grid .review-overlays {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+}
+
+.review-name-label,
+.review-mute-label {
+  position: absolute;
+  top: 7px;
+  max-width: calc(100% - 14px);
+  border-radius: 5px;
+  background: rgba(4, 10, 18, 0.72);
+  color: #fff;
+  padding: 3px 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.review-name-label {
+  left: 7px;
+}
+
+.review-mute-label {
+  right: 7px;
+}
+
+.review-grid .error-message {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  margin: 0;
+  border-radius: 5px;
+  background: rgba(90, 15, 12, 0.86);
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.review-grid .error-message:empty {
+  display: none;
+}
+
+.review-grid.is-focus-mode {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.review-grid.is-focus-mode .video-card:not(.is-expanded-review) {
+  display: none;
+}
+
+.review-grid.is-focus-mode .video-card.is-expanded-review {
+  width: 100%;
+  height: 100%;
+}
+
+.review-empty-message {
+  align-self: center;
+  justify-self: center;
+  max-width: 620px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 18px;
+  color: #f2f6fb;
+  text-align: center;
+  font-weight: 800;
+}
+
 @media (max-width: 1450px) {
   .video-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -427,6 +654,10 @@ main {
     padding: 10px;
   }
 
+  .mode-panel {
+    display: grid;
+  }
+
   .video-grid,
   .inline-fields,
   .card-head {
@@ -441,5 +672,19 @@ main {
   .share-actions button,
   .file-button {
     width: 100%;
+  }
+
+  .review-mode {
+    padding: 5px;
+  }
+
+  .review-toolbar-row {
+    gap: 5px;
+  }
+
+  .review-toolbar button,
+  .review-toolbar input,
+  .review-toolbar select {
+    flex: 1 1 92px;
   }
 }

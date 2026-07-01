@@ -13,7 +13,11 @@ const appState = {
   modalSlot: null,
   timerId: null,
   lastTickAt: null,
-  youtubeReady: false
+  youtubeReady: false,
+  mode: "settings",
+  focusedReviewSlot: null,
+  reviewControlsPinned: true,
+  reviewControlsTimerId: null
 };
 
 const elements = {};
@@ -49,6 +53,16 @@ function bindElements() {
   elements.modalOverlay = document.getElementById("modalOverlay");
   elements.modalTitle = document.getElementById("modalTitle");
   elements.modalPlayerHost = document.getElementById("modalPlayerHost");
+  elements.settingsMode = document.getElementById("settingsMode");
+  elements.reviewMode = document.getElementById("reviewMode");
+  elements.reviewGrid = document.getElementById("reviewGrid");
+  elements.reviewToolbar = document.getElementById("reviewToolbar");
+  elements.reviewEmptyMessage = document.getElementById("reviewEmptyMessage");
+  elements.reviewModeTimeDisplay = document.getElementById("reviewModeTimeDisplay");
+  elements.reviewModeStateDisplay = document.getElementById("reviewModeStateDisplay");
+  elements.reviewModeCountDisplay = document.getElementById("reviewModeCountDisplay");
+  elements.reviewModeTimeInput = document.getElementById("reviewModeTimeInput");
+  elements.reviewRateSelect = document.getElementById("reviewRateSelect");
 }
 
 function createSlots() {
@@ -84,6 +98,8 @@ function createSlots() {
       actualStatus: fragment.querySelector(".actual-time-status"),
       muteStatus: fragment.querySelector(".mute-status"),
       loadStatus: fragment.querySelector(".load-status"),
+      reviewNameLabel: fragment.querySelector(".review-name-label"),
+      reviewMuteLabel: fragment.querySelector(".review-mute-label"),
       errorMessage: fragment.querySelector(".error-message")
     };
 
@@ -127,24 +143,37 @@ function bindSlotEvents(slot) {
   });
 
   slot.expandButton.addEventListener("click", () => {
-    toggleModal(slot.index);
+    if (appState.mode === "review") {
+      toggleReviewFocus(slot.index);
+    } else {
+      toggleModal(slot.index);
+    }
   });
 
   slot.playerShell.addEventListener("click", () => {
     if (slot.videoId) {
-      toggleModal(slot.index);
+      if (appState.mode === "review") {
+        toggleReviewFocus(slot.index);
+      } else {
+        toggleModal(slot.index);
+      }
     }
   });
 
   slot.card.addEventListener("click", (event) => {
     const interactive = event.target.closest("button, input, select, textarea, label, iframe");
     if (!interactive && slot.videoId) {
-      toggleModal(slot.index);
+      if (appState.mode === "review") {
+        toggleReviewFocus(slot.index);
+      } else {
+        toggleModal(slot.index);
+      }
     }
   });
 }
 
 function bindGlobalEvents() {
+  document.getElementById("startReviewButton").addEventListener("click", enterReviewMode);
   document.getElementById("playAllButton").addEventListener("click", playAll);
   document.getElementById("pauseAllButton").addEventListener("click", pauseAll);
   document.getElementById("back5Button").addEventListener("click", () => shiftReviewTime(-5));
@@ -161,6 +190,19 @@ function bindGlobalEvents() {
   document.getElementById("exportJsonButton").addEventListener("click", exportJson);
   document.getElementById("importJsonInput").addEventListener("change", importJsonFile);
   document.getElementById("shareLinkButton").addEventListener("click", createShareLink);
+  document.getElementById("reviewPlayAllButton").addEventListener("click", playAll);
+  document.getElementById("reviewPauseAllButton").addEventListener("click", pauseAll);
+  document.getElementById("reviewBack5Button").addEventListener("click", () => shiftReviewTime(-5));
+  document.getElementById("reviewForward5Button").addEventListener("click", () => shiftReviewTime(5));
+  document.getElementById("reviewBack10Button").addEventListener("click", () => shiftReviewTime(-10));
+  document.getElementById("reviewForward10Button").addEventListener("click", () => shiftReviewTime(10));
+  document.getElementById("reviewResyncButton").addEventListener("click", resyncAll);
+  document.getElementById("reviewJumpButton").addEventListener("click", jumpToReviewTime);
+  document.getElementById("reviewApplyRateButton").addEventListener("click", applySelectedRate);
+  document.getElementById("reviewMuteAllButton").addEventListener("click", () => setAllMute(true));
+  document.getElementById("reviewFocusAudioButton").addEventListener("click", focusSelectedReviewAudio);
+  document.getElementById("toggleReviewControlsButton").addEventListener("click", toggleReviewControls);
+  document.getElementById("backToSettingsButton").addEventListener("click", exitReviewMode);
   document.getElementById("modalCloseButton").addEventListener("click", closeModal);
   document.getElementById("modalSoundOnlyButton").addEventListener("click", () => {
     if (appState.modalSlot !== null) {
@@ -173,16 +215,204 @@ function bindGlobalEvents() {
     }
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeModal();
-    }
+    handleKeyboardShortcut(event);
   });
+  window.addEventListener("resize", updateReviewLayout);
+  elements.reviewMode.addEventListener("mousemove", handleReviewMouseMove);
 }
 
 function loadInitialState() {
   const hashLoaded = restoreFromHash();
   if (!hashLoaded) {
     restoreFromLocalStorage(false);
+  }
+}
+
+function enterReviewMode() {
+  closeModal();
+  appState.focusedReviewSlot = null;
+  appState.mode = "review";
+
+  appState.slots.forEach((slot) => {
+    slot.url = slot.urlInput.value.trim();
+    validateUrlInput(slot);
+    applyStartInput(slot, slot.startInput.value);
+    if (isReviewSlotActive(slot)) {
+      createOrUpdatePlayer(slot.index);
+      elements.reviewGrid.appendChild(slot.card);
+    }
+  });
+
+  elements.settingsMode.hidden = true;
+  elements.reviewMode.hidden = false;
+  document.body.classList.add("is-reviewing");
+  elements.reviewModeTimeInput.value = formatTime(appState.reviewTime);
+  elements.reviewRateSelect.value = String(appState.rate);
+  updateReviewModeVisibility();
+  updateReviewLayout();
+  updateAllUi();
+}
+
+function exitReviewMode() {
+  closeModal();
+  appState.mode = "settings";
+  appState.focusedReviewSlot = null;
+  elements.reviewGrid.classList.remove("is-focus-mode");
+  appState.slots.forEach((slot) => {
+    slot.card.classList.remove("is-expanded-review");
+    elements.videoGrid.appendChild(slot.card);
+  });
+  elements.reviewMode.hidden = true;
+  elements.settingsMode.hidden = false;
+  document.body.classList.remove("is-reviewing");
+  updateAllUi();
+}
+
+function isReviewSlotActive(slot) {
+  return Boolean(slot.urlInput.value.trim() && slot.videoId);
+}
+
+function getActiveReviewSlots() {
+  return appState.slots.filter(isReviewSlotActive);
+}
+
+function updateReviewModeVisibility() {
+  const activeSlots = getActiveReviewSlots();
+  const hasActiveSlots = activeSlots.length > 0;
+  elements.reviewEmptyMessage.hidden = hasActiveSlots;
+  elements.reviewGrid.hidden = !hasActiveSlots;
+  if (!hasActiveSlots) {
+    return;
+  }
+  activeSlots.forEach((slot) => {
+    if (slot.card.parentElement !== elements.reviewGrid) {
+      elements.reviewGrid.appendChild(slot.card);
+    }
+  });
+}
+
+function updateReviewLayout() {
+  if (appState.mode !== "review" || elements.reviewGrid.hidden || appState.focusedReviewSlot !== null) {
+    return;
+  }
+  const activeCount = getActiveReviewSlots().length;
+  if (activeCount === 0) {
+    return;
+  }
+
+  const rect = elements.reviewGrid.getBoundingClientRect();
+  const containerWidth = Math.max(1, rect.width);
+  const containerHeight = Math.max(1, rect.height);
+  let best = { cols: 1, rows: activeCount, width: containerWidth, height: Math.min(containerHeight, containerWidth * 9 / 16), area: 0 };
+
+  for (let cols = 1; cols <= activeCount; cols += 1) {
+    const rows = Math.ceil(activeCount / cols);
+    let tileWidth = containerWidth / cols;
+    let tileHeight = tileWidth * 9 / 16;
+    if (rows * tileHeight > containerHeight) {
+      tileHeight = containerHeight / rows;
+      tileWidth = tileHeight * 16 / 9;
+    }
+    const area = tileWidth * tileHeight;
+    const isBetterArea = area > best.area + 0.5;
+    const isSameAreaBetterShape = Math.abs(area - best.area) <= 0.5 && rows < best.rows;
+    if (isBetterArea || isSameAreaBetterShape) {
+      best = { cols, rows, width: tileWidth, height: tileHeight, area };
+    }
+  }
+
+  elements.reviewGrid.style.setProperty("--review-cols", String(best.cols));
+  elements.reviewGrid.style.setProperty("--review-tile-width", `${Math.floor(best.width)}px`);
+  elements.reviewGrid.style.setProperty("--review-tile-height", `${Math.floor(best.height)}px`);
+}
+
+function toggleReviewFocus(index) {
+  if (appState.mode !== "review") {
+    toggleModal(index);
+    return;
+  }
+  if (appState.focusedReviewSlot === index) {
+    appState.focusedReviewSlot = null;
+    elements.reviewGrid.classList.remove("is-focus-mode");
+    appState.slots[index].card.classList.remove("is-expanded-review");
+    updateReviewLayout();
+  } else {
+    appState.focusedReviewSlot = index;
+    appState.selectedSlot = index;
+    elements.reviewGrid.classList.add("is-focus-mode");
+    appState.slots.forEach((slot) => {
+      slot.card.classList.toggle("is-expanded-review", slot.index === index);
+    });
+    focusAudio(index);
+  }
+  updateAllUi();
+}
+
+function focusSelectedReviewAudio() {
+  const targetIndex = appState.focusedReviewSlot ?? appState.selectedSlot ?? (getActiveReviewSlots()[0] && getActiveReviewSlots()[0].index);
+  if (typeof targetIndex === "number") {
+    focusAudio(targetIndex);
+  }
+}
+
+function toggleReviewControls() {
+  appState.reviewControlsPinned = !appState.reviewControlsPinned;
+  elements.reviewMode.classList.toggle("controls-hidden", !appState.reviewControlsPinned);
+  document.getElementById("toggleReviewControlsButton").textContent = appState.reviewControlsPinned ? "操作バー非表示" : "操作バー表示";
+}
+
+function handleReviewMouseMove() {
+  if (appState.mode !== "review" || appState.reviewControlsPinned) {
+    return;
+  }
+  elements.reviewMode.classList.remove("controls-hidden");
+  window.clearTimeout(appState.reviewControlsTimerId);
+  appState.reviewControlsTimerId = window.setTimeout(() => {
+    if (!appState.reviewControlsPinned && appState.mode === "review") {
+      elements.reviewMode.classList.add("controls-hidden");
+    }
+  }, 2400);
+}
+
+function handleKeyboardShortcut(event) {
+  const target = event.target;
+  const isTyping = target && target.closest && target.closest("input, textarea, select");
+  if (isTyping) {
+    return;
+  }
+
+  if (event.key === "Escape") {
+    if (appState.mode === "review" && appState.focusedReviewSlot !== null) {
+      toggleReviewFocus(appState.focusedReviewSlot);
+    } else if (appState.mode === "review") {
+      exitReviewMode();
+    } else {
+      closeModal();
+    }
+    event.preventDefault();
+    return;
+  }
+
+  if (appState.mode !== "review") {
+    return;
+  }
+
+  if (event.code === "Space") {
+    if (appState.isPlaying) {
+      pauseAll();
+    } else {
+      playAll();
+    }
+    event.preventDefault();
+  } else if (event.key === "ArrowLeft") {
+    shiftReviewTime(-5);
+    event.preventDefault();
+  } else if (event.key === "ArrowRight") {
+    shiftReviewTime(5);
+    event.preventDefault();
+  } else if (event.key.toLowerCase() === "r") {
+    resyncAll();
+    event.preventDefault();
   }
 }
 
@@ -219,7 +449,9 @@ function applySettings(settings, options = {}) {
   appState.reviewTime = normalized.reviewTime;
   appState.rate = normalized.rate;
   elements.rateSelect.value = String(normalized.rate);
+  elements.reviewRateSelect.value = String(normalized.rate);
   elements.reviewTimeInput.value = formatTime(appState.reviewTime);
+  elements.reviewModeTimeInput.value = formatTime(appState.reviewTime);
 
   normalized.slots.forEach((slotSettings, index) => {
     const slot = appState.slots[index];
@@ -502,14 +734,21 @@ function createOrUpdatePlayer(index) {
 
   slot.status = "読み込み中";
   slot.ready = false;
+  const playerVars = {
+    start: slot.startSeconds + appState.reviewTime,
+    enablejsapi: 1,
+    rel: 0,
+    modestbranding: 1,
+    playsinline: 1
+  };
+  const origin = getYouTubeOrigin();
+  if (origin) {
+    playerVars.origin = origin;
+  }
+
   slot.player = new YT.Player(slot.playerHost.id, {
     videoId: slot.videoId,
-    playerVars: {
-      start: slot.startSeconds + appState.reviewTime,
-      rel: 0,
-      modestbranding: 1,
-      playsinline: 1
-    },
+    playerVars,
     events: {
       onReady: () => {
         slot.ready = true;
@@ -551,11 +790,19 @@ function youtubeErrorMessage(code) {
   const messages = {
     2: "動画IDまたはパラメータが正しくありません。",
     5: "HTML5プレイヤーで再生できません。",
-    100: "動画が見つからない、または非公開です。",
-    101: "投稿者が埋め込み再生を許可していません。",
-    150: "投稿者が埋め込み再生を許可していません。"
+    100: "エラー100: 動画が非公開、削除済み、またはURLが間違っている可能性があります。",
+    101: "エラー101: この動画は埋め込み再生が許可されていない可能性があります。",
+    150: "エラー150: この動画は埋め込み再生が許可されていない可能性があります。",
+    153: "エラー153: YouTubeに参照元情報が渡っていない可能性があります。index.htmlを直接開かず、localhost または公開URLから開いてください。例: python -m http.server 5173"
   };
   return messages[code] || `YouTube読み込みエラーです。コード: ${code}`;
+}
+
+function getYouTubeOrigin() {
+  if (!window.location.origin || window.location.origin === "null" || window.location.protocol === "file:") {
+    return undefined;
+  }
+  return window.location.origin;
 }
 
 function playAll() {
@@ -576,24 +823,30 @@ function pauseAll() {
   appState.isPlaying = false;
   appState.lastTickAt = null;
   elements.reviewTimeInput.value = formatTime(appState.reviewTime);
+  elements.reviewModeTimeInput.value = formatTime(appState.reviewTime);
   updateAllUi();
 }
 
 function shiftReviewTime(deltaSeconds) {
   appState.reviewTime = Math.max(0, appState.reviewTime + deltaSeconds);
   elements.reviewTimeInput.value = formatTime(appState.reviewTime);
+  elements.reviewModeTimeInput.value = formatTime(appState.reviewTime);
   resyncAll();
   saveSettingsToLocalStorage(false);
 }
 
 function jumpToReviewTime() {
-  const result = parseTimeToSeconds(elements.reviewTimeInput.value);
+  const activeInput = appState.mode === "review" ? elements.reviewModeTimeInput : elements.reviewTimeInput;
+  const result = parseTimeToSeconds(activeInput.value);
   elements.reviewTimeInput.classList.toggle("is-invalid", !result.valid);
+  elements.reviewModeTimeInput.classList.toggle("is-invalid", !result.valid);
   if (!result.valid) {
     showShareMessage("反省会タイムの形式が正しくありません。例: 05:00", true);
     return;
   }
   appState.reviewTime = result.seconds;
+  elements.reviewTimeInput.value = formatTime(appState.reviewTime);
+  elements.reviewModeTimeInput.value = formatTime(appState.reviewTime);
   resyncAll();
   saveSettingsToLocalStorage(false);
 }
@@ -616,7 +869,10 @@ function seekSlotToReviewTime(slot) {
 }
 
 function applySelectedRate() {
-  appState.rate = Number(elements.rateSelect.value) || 1;
+  const activeSelect = appState.mode === "review" ? elements.reviewRateSelect : elements.rateSelect;
+  appState.rate = Number(activeSelect.value) || 1;
+  elements.rateSelect.value = String(appState.rate);
+  elements.reviewRateSelect.value = String(appState.rate);
   eachReadyPlayer((slot) => {
     slot.player.setPlaybackRate(appState.rate);
   });
@@ -707,6 +963,7 @@ function startClock() {
       appState.reviewTime += elapsedSeconds * appState.rate;
       appState.lastTickAt = now;
       elements.reviewTimeInput.value = formatTime(appState.reviewTime);
+      elements.reviewModeTimeInput.value = formatTime(appState.reviewTime);
     }
     updateAllUi();
   }, 1000);
@@ -725,11 +982,19 @@ function syncReviewTimeFromFirstReadyPlayer() {
 
 function updateAllUi() {
   const loadedCount = appState.slots.filter((slot) => slot.ready).length;
+  const activeReviewCount = getActiveReviewSlots().length;
   elements.reviewTimeDisplay.textContent = formatTime(appState.reviewTime);
   elements.playStateDisplay.textContent = appState.isPlaying ? "再生中" : "停止中";
   elements.rateDisplay.textContent = `${Number(appState.rate).toFixed(appState.rate % 1 === 0 ? 1 : 2)}x`;
   elements.loadedCountDisplay.textContent = `${loadedCount} / ${SLOT_COUNT}`;
+  elements.reviewModeTimeDisplay.textContent = formatTime(appState.reviewTime);
+  elements.reviewModeStateDisplay.textContent = appState.isPlaying ? "再生中" : "停止中";
+  elements.reviewModeCountDisplay.textContent = `${activeReviewCount}本 / 読み込み${loadedCount}本`;
   appState.slots.forEach(updateSlotUi);
+  if (appState.mode === "review") {
+    updateReviewModeVisibility();
+    updateReviewLayout();
+  }
 }
 
 function updateSlotUi(slot) {
@@ -739,6 +1004,8 @@ function updateSlotUi(slot) {
   slot.startStatus.textContent = `${formatTime(slot.startSeconds)}${slot.startValid ? "" : "（形式エラー: 0秒扱い）"}`;
   slot.actualStatus.textContent = getActualTimeText(slot);
   slot.muteStatus.textContent = slot.muted ? "ミュート中" : "音声ON";
+  slot.reviewNameLabel.textContent = slot.nameInput.value.trim() || `${slot.index + 1}枠`;
+  slot.reviewMuteLabel.textContent = slot.muted ? "ミュート" : "音声ON";
   slot.loadStatus.textContent = slot.status;
   slot.errorMessage.textContent = slot.error;
   slot.muteButton.textContent = slot.muted ? "ミュート解除" : "ミュート";

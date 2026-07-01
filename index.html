@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>大会反省会用YouTubeレビューWebアプリ Ver1</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -20,7 +21,15 @@
     </div>
   </header>
 
-  <main>
+  <main id="settingsMode" class="settings-mode">
+    <section class="mode-panel" aria-label="画面モード">
+      <div>
+        <h2>設定モード</h2>
+        <p>プレイヤー名、YouTube URL、個別開始位置を入力してからレビュー画面を開始してください。</p>
+      </div>
+      <button id="startReviewButton" type="button">レビュー画面を開始</button>
+    </section>
+
     <section class="toolbar" aria-label="全体操作">
       <div class="control-group">
         <button id="playAllButton" type="button">全再生</button>
@@ -77,12 +86,51 @@
         <li>15本同時再生はPC負荷が高くなります。</li>
         <li>重い場合はYouTube側の画質を下げてください。</li>
         <li>動画投稿者側で埋め込み再生が無効になっている場合、このツール上で再生できない可能性があります。</li>
+        <li>エラー153を避けるため、index.htmlを直接開かず localhost または公開URLから開いてください。</li>
         <li>限定公開URLの取り扱いには注意してください。</li>
       </ul>
     </section>
 
     <section id="videoGrid" class="video-grid" aria-label="動画一覧"></section>
   </main>
+
+  <section id="reviewMode" class="review-mode" hidden aria-label="レビューモード">
+    <div id="reviewToolbar" class="review-toolbar">
+      <div class="review-toolbar-row">
+        <strong id="reviewModeTimeDisplay">00:00:00</strong>
+        <span id="reviewModeStateDisplay">停止中</span>
+        <span id="reviewModeCountDisplay">0本</span>
+        <button id="reviewPlayAllButton" type="button">全再生</button>
+        <button id="reviewPauseAllButton" type="button">全停止</button>
+        <button id="reviewBack5Button" type="button">5秒戻す</button>
+        <button id="reviewForward5Button" type="button">5秒進める</button>
+        <button id="reviewBack10Button" type="button">10秒戻す</button>
+        <button id="reviewForward10Button" type="button">10秒進める</button>
+        <button id="reviewResyncButton" type="button">再同期</button>
+      </div>
+      <div class="review-toolbar-row">
+        <label for="reviewModeTimeInput">反省会タイム</label>
+        <input id="reviewModeTimeInput" type="text" inputmode="numeric" placeholder="例: 05:00">
+        <button id="reviewJumpButton" type="button">ジャンプ</button>
+        <label for="reviewRateSelect">倍速</label>
+        <select id="reviewRateSelect">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1.0x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2.0x</option>
+        </select>
+        <button id="reviewApplyRateButton" type="button">倍速変更</button>
+        <button id="reviewMuteAllButton" type="button">全ミュート</button>
+        <button id="reviewFocusAudioButton" type="button">選択中のみ音声ON</button>
+        <button id="toggleReviewControlsButton" type="button">操作バー非表示</button>
+        <button id="backToSettingsButton" type="button">設定に戻る</button>
+      </div>
+    </div>
+    <div id="reviewGrid" class="review-grid" aria-label="レビュー動画一覧"></div>
+    <p id="reviewEmptyMessage" class="review-empty-message" hidden>有効なYouTube URLが入力された動画がありません。設定画面に戻ってURLを入力してください。</p>
+  </section>
 
   <div id="modalOverlay" class="modal-overlay" hidden>
     <div class="modal-shell" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -121,6 +169,10 @@
       <div class="player-shell">
         <div class="player-placeholder">YouTube URLを入力して「動画読み込み」</div>
         <div class="player-host"></div>
+        <div class="review-overlays" aria-hidden="true">
+          <span class="review-name-label"></span>
+          <span class="review-mute-label"></span>
+        </div>
       </div>
 
       <div class="card-actions">
