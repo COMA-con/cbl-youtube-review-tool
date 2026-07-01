@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>大会反省会用YouTubeレビューWebアプリ Ver1</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>大会反省会用YouTubeレビューWebアプリ Ver1</h1>
+      <p>最大15本のYouTube限定公開アーカイブを、反省会タイム基準で同時確認します。</p>
+    </div>
+    <div class="summary-panel" aria-live="polite">
+      <div><span>反省会タイム</span><strong id="reviewTimeDisplay">00:00:00</strong></div>
+      <div><span>再生状態</span><strong id="playStateDisplay">停止中</strong></div>
+      <div><span>倍速</span><strong id="rateDisplay">1.0x</strong></div>
+      <div><span>読み込み</span><strong id="loadedCountDisplay">0 / 15</strong></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="toolbar" aria-label="全体操作">
+      <div class="control-group">
+        <button id="playAllButton" type="button">全再生</button>
+        <button id="pauseAllButton" type="button">全停止</button>
+        <button id="back5Button" type="button">5秒戻す</button>
+        <button id="forward5Button" type="button">5秒進める</button>
+        <button id="back10Button" type="button">10秒戻す</button>
+        <button id="forward10Button" type="button">10秒進める</button>
+        <button id="resyncButton" type="button">再同期</button>
+      </div>
+
+      <div class="control-group">
+        <label for="reviewTimeInput">任意の反省会タイム</label>
+        <input id="reviewTimeInput" type="text" inputmode="numeric" placeholder="例: 05:00">
+        <button id="jumpButton" type="button">ジャンプ</button>
+      </div>
+
+      <div class="control-group">
+        <label for="rateSelect">倍速</label>
+        <select id="rateSelect">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1.0x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2.0x</option>
+        </select>
+        <button id="applyRateButton" type="button">倍速一括変更</button>
+      </div>
+
+      <div class="control-group">
+        <button id="muteAllButton" type="button">全ミュート</button>
+        <button id="unmuteAllButton" type="button">全ミュート解除</button>
+        <button id="saveButton" type="button">設定保存</button>
+        <button id="loadButton" type="button">設定読み込み</button>
+      </div>
+    </section>
+
+    <section class="share-panel" aria-label="設定共有">
+      <div class="share-actions">
+        <button id="exportJsonButton" type="button">JSON出力</button>
+        <label class="file-button" for="importJsonInput">JSON読み込み</label>
+        <input id="importJsonInput" type="file" accept="application/json,.json">
+        <button id="shareLinkButton" type="button">共有リンク作成</button>
+      </div>
+      <textarea id="jsonOutput" rows="5" readonly placeholder="JSON出力または共有リンクの結果がここに表示されます。"></textarea>
+      <p id="shareWarning" class="warning-text" role="status"></p>
+    </section>
+
+    <section class="notice-panel" aria-label="注意書き">
+      <ul>
+        <li>YouTubeの仕様上、完全なフレーム単位同期は保証できません。</li>
+        <li>ズレた場合は「再同期」ボタンを押してください。</li>
+        <li>15本同時再生はPC負荷が高くなります。</li>
+        <li>重い場合はYouTube側の画質を下げてください。</li>
+        <li>動画投稿者側で埋め込み再生が無効になっている場合、このツール上で再生できない可能性があります。</li>
+        <li>限定公開URLの取り扱いには注意してください。</li>
+      </ul>
+    </section>
+
+    <section id="videoGrid" class="video-grid" aria-label="動画一覧"></section>
+  </main>
+
+  <div id="modalOverlay" class="modal-overlay" hidden>
+    <div class="modal-shell" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <h2 id="modalTitle">拡大表示</h2>
+        <div>
+          <button id="modalSoundOnlyButton" type="button">この動画だけ音声ON</button>
+          <button id="modalCloseButton" type="button">閉じる</button>
+        </div>
+      </div>
+      <div id="modalPlayerHost" class="modal-player-host"></div>
+    </div>
+  </div>
+
+  <template id="slotTemplate">
+    <article class="video-card">
+      <div class="card-head">
+        <div>
+          <span class="slot-label"></span>
+          <input class="player-name-input" type="text" placeholder="プレイヤー名">
+        </div>
+        <button class="focus-audio-button" type="button">この動画だけ音声ON</button>
+      </div>
+
+      <label> YouTube URL
+        <input class="youtube-url-input" type="url" placeholder="https://www.youtube.com/watch?v=...">
+      </label>
+
+      <div class="inline-fields">
+        <label> 個別開始位置
+          <input class="start-time-input" type="text" inputmode="numeric" placeholder="例: 01:23:45">
+        </label>
+        <button class="load-video-button" type="button">動画読み込み</button>
+      </div>
+
+      <div class="player-shell">
+        <div class="player-placeholder">YouTube URLを入力して「動画読み込み」</div>
+        <div class="player-host"></div>
+      </div>
+
+      <div class="card-actions">
+        <button class="mute-toggle-button" type="button">ミュート切替</button>
+        <button class="expand-button" type="button">拡大表示</button>
+      </div>
+
+      <dl class="status-grid">
+        <div><dt>開始位置</dt><dd class="start-status">00:00:00</dd></div>
+        <div><dt>実再生位置</dt><dd class="actual-time-status">00:00:00</dd></div>
+        <div><dt>ミュート</dt><dd class="mute-status">未読込</dd></div>
+        <div><dt>状態</dt><dd class="load-status">未読込</dd></div>
+      </dl>
+      <p class="error-message" role="status"></p>
+    </article>
+  </template>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="app.js"></script>
+</body>
+</html>
