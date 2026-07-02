@@ -4,189 +4,155 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>大会反省会用YouTubeレビューWebアプリ Ver1</title>
+  <title>CBL YouTube Review Tool Ver1.1</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="app-header">
-    <div>
-      <h1>大会反省会用YouTubeレビューWebアプリ Ver1</h1>
-      <p>最大15本のYouTube限定公開アーカイブを、反省会タイム基準で同時確認します。</p>
-    </div>
-    <div class="summary-panel" aria-live="polite">
-      <div><span>反省会タイム</span><strong id="reviewTimeDisplay">00:00:00</strong></div>
-      <div><span>再生状態</span><strong id="playStateDisplay">停止中</strong></div>
-      <div><span>倍速</span><strong id="rateDisplay">1.0x</strong></div>
-      <div><span>読み込み</span><strong id="loadedCountDisplay">0 / 15</strong></div>
-    </div>
-  </header>
-
   <main id="settingsMode" class="settings-mode">
-    <section class="mode-panel" aria-label="画面モード">
+    <header class="app-header">
       <div>
-        <h2>設定モード</h2>
-        <p>プレイヤー名、YouTube URL、個別開始位置を入力してからレビュー画面を開始してください。</p>
+        <h1>CBL YouTube Review Tool Ver1.1</h1>
+        <p>設定担当者が最大15本のYouTube URLと開始位置を入れて、反省会用の共有URLを作る画面です。</p>
       </div>
-      <button id="startReviewButton" type="button">レビュー画面を開始</button>
+      <div class="header-actions">
+        <button id="buildShareUrlButton" type="button">共有URL作成</button>
+        <button id="previewReviewButton" type="button">レビュー画面で確認</button>
+      </div>
+    </header>
+
+    <section class="notice-panel" aria-label="重要な注意">
+      <ul>
+        <li>共有URLを開いた人は、設定画面を経由せずレビュー画面へ直行します。</li>
+        <li>エラー153を避けるため、index.htmlを直接開かず localhost または公開URLから開いてください。</li>
+        <li>15本同時再生はPCスペック、GPU、メモリ、回線、ブラウザの状態に強く依存します。</li>
+        <li>画質はツール側で一括指定・強制しません。重い場合はYouTubeプレイヤー内の歯車から手動で下げてください。</li>
+      </ul>
     </section>
 
-    <section class="toolbar" aria-label="全体操作">
-      <div class="control-group">
-        <button id="playAllButton" type="button">全再生</button>
-        <button id="pauseAllButton" type="button">全停止</button>
-        <button id="back5Button" type="button">5秒戻す</button>
-        <button id="forward5Button" type="button">5秒進める</button>
-        <button id="back10Button" type="button">10秒戻す</button>
-        <button id="forward10Button" type="button">10秒進める</button>
-        <button id="resyncButton" type="button">再同期</button>
+    <section class="settings-panel" aria-label="共有URL設定">
+      <div class="settings-panel-head">
+        <div>
+          <h2>動画設定</h2>
+          <p>開始位置は HH:MM:SS または MM:SS。秒数のみの入力はVer1.1では警告扱いで0秒になります。</p>
+        </div>
+        <label class="rate-field" for="settingsRateSelect">再生速度
+          <select id="settingsRateSelect">
+            <option value="05">0.5x</option>
+            <option value="075">0.75x</option>
+            <option value="10" selected>1.0x</option>
+            <option value="125">1.25x</option>
+            <option value="15">1.5x</option>
+            <option value="20">2.0x</option>
+          </select>
+        </label>
       </div>
-
-      <div class="control-group">
-        <label for="reviewTimeInput">任意の反省会タイム</label>
-        <input id="reviewTimeInput" type="text" inputmode="numeric" placeholder="例: 05:00">
-        <button id="jumpButton" type="button">ジャンプ</button>
-      </div>
-
-      <div class="control-group">
-        <label for="rateSelect">倍速</label>
-        <select id="rateSelect">
-          <option value="0.5">0.5x</option>
-          <option value="0.75">0.75x</option>
-          <option value="1" selected>1.0x</option>
-          <option value="1.25">1.25x</option>
-          <option value="1.5">1.5x</option>
-          <option value="2">2.0x</option>
-        </select>
-        <button id="applyRateButton" type="button">倍速一括変更</button>
-      </div>
-
-      <div class="control-group">
-        <button id="muteAllButton" type="button">全ミュート</button>
-        <button id="unmuteAllButton" type="button">全ミュート解除</button>
-        <button id="saveButton" type="button">設定保存</button>
-        <button id="loadButton" type="button">設定読み込み</button>
-      </div>
+      <section id="slotList" class="slot-list" aria-label="動画入力欄"></section>
     </section>
 
-    <section class="share-panel" aria-label="設定共有">
+    <section class="share-panel" aria-label="共有URL作成結果">
+      <div class="share-actions">
+        <button id="buildShareUrlButtonBottom" type="button">共有URL作成</button>
+        <button id="copyShareUrlButton" type="button" hidden>共有URLをコピー</button>
+        <button id="previewReviewButtonBottom" type="button" hidden>レビュー画面で確認</button>
+      </div>
+      <label for="shareUrlOutput">共有URL</label>
+      <textarea id="shareUrlOutput" rows="2" readonly placeholder="共有URL作成後にここへ表示されます。"></textarea>
+      <p id="shareResult" class="result-message" role="status"></p>
+    </section>
+
+    <details class="advanced-panel">
+      <summary>詳細機能: JSONバックアップ</summary>
+      <p>通常運用では使いません。設定担当者のバックアップや後日の再編集用です。</p>
       <div class="share-actions">
         <button id="exportJsonButton" type="button">JSON出力</button>
         <label class="file-button" for="importJsonInput">JSON読み込み</label>
         <input id="importJsonInput" type="file" accept="application/json,.json">
-        <button id="shareLinkButton" type="button">共有リンク作成</button>
       </div>
-      <textarea id="jsonOutput" rows="5" readonly placeholder="JSON出力または共有リンクの結果がここに表示されます。"></textarea>
-      <p id="shareWarning" class="warning-text" role="status"></p>
-    </section>
-
-    <section class="notice-panel" aria-label="注意書き">
-      <ul>
-        <li>YouTubeの仕様上、完全なフレーム単位同期は保証できません。</li>
-        <li>ズレた場合は「再同期」ボタンを押してください。</li>
-        <li>15本同時再生はPC負荷が高くなります。</li>
-        <li>重い場合はYouTube側の画質を下げてください。</li>
-        <li>動画投稿者側で埋め込み再生が無効になっている場合、このツール上で再生できない可能性があります。</li>
-        <li>エラー153を避けるため、index.htmlを直接開かず localhost または公開URLから開いてください。</li>
-        <li>限定公開URLの取り扱いには注意してください。</li>
-      </ul>
-    </section>
-
-    <section id="videoGrid" class="video-grid" aria-label="動画一覧"></section>
+      <textarea id="jsonOutput" rows="6" readonly placeholder="JSON出力結果がここに表示されます。"></textarea>
+      <p id="jsonResult" class="result-message" role="status"></p>
+    </details>
   </main>
 
-  <section id="reviewMode" class="review-mode" hidden aria-label="レビューモード">
-    <div id="reviewToolbar" class="review-toolbar">
-      <div class="review-toolbar-row">
-        <strong id="reviewModeTimeDisplay">00:00:00</strong>
-        <span id="reviewModeStateDisplay">停止中</span>
-        <span id="reviewModeCountDisplay">0本</span>
-        <button id="reviewPlayAllButton" type="button">全再生</button>
-        <button id="reviewPauseAllButton" type="button">全停止</button>
-        <button id="reviewBack5Button" type="button">5秒戻す</button>
-        <button id="reviewForward5Button" type="button">5秒進める</button>
-        <button id="reviewBack10Button" type="button">10秒戻す</button>
-        <button id="reviewForward10Button" type="button">10秒進める</button>
-        <button id="reviewResyncButton" type="button">再同期</button>
-      </div>
-      <div class="review-toolbar-row">
-        <label for="reviewModeTimeInput">反省会タイム</label>
-        <input id="reviewModeTimeInput" type="text" inputmode="numeric" placeholder="例: 05:00">
-        <button id="reviewJumpButton" type="button">ジャンプ</button>
-        <label for="reviewRateSelect">倍速</label>
-        <select id="reviewRateSelect">
-          <option value="0.5">0.5x</option>
-          <option value="0.75">0.75x</option>
-          <option value="1" selected>1.0x</option>
-          <option value="1.25">1.25x</option>
-          <option value="1.5">1.5x</option>
-          <option value="2">2.0x</option>
-        </select>
-        <button id="reviewApplyRateButton" type="button">倍速変更</button>
-        <button id="reviewMuteAllButton" type="button">全ミュート</button>
-        <button id="reviewFocusAudioButton" type="button">選択中のみ音声ON</button>
-        <button id="toggleReviewControlsButton" type="button">操作バー非表示</button>
-        <button id="backToSettingsButton" type="button">設定に戻る</button>
-      </div>
+  <section id="fatalErrorMode" class="fatal-error-mode" hidden>
+    <div class="fatal-card">
+      <h1>共有URLを読み込めません</h1>
+      <p id="fatalErrorMessage"></p>
+      <button id="fatalBackToSettingsButton" type="button">設定画面に戻る</button>
     </div>
-    <div id="reviewGrid" class="review-grid" aria-label="レビュー動画一覧"></div>
-    <p id="reviewEmptyMessage" class="review-empty-message" hidden>有効なYouTube URLが入力された動画がありません。設定画面に戻ってURLを入力してください。</p>
   </section>
 
-  <div id="modalOverlay" class="modal-overlay" hidden>
-    <div class="modal-shell" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-header">
-        <h2 id="modalTitle">拡大表示</h2>
-        <div>
-          <button id="modalSoundOnlyButton" type="button">この動画だけ音声ON</button>
-          <button id="modalCloseButton" type="button">閉じる</button>
-        </div>
+  <section id="reviewMode" class="review-mode" hidden aria-label="レビューモード">
+    <div id="reviewWarnings" class="review-warnings" hidden></div>
+    <div id="reviewGrid" class="review-grid" aria-label="レビュー動画一覧"></div>
+    <p id="allHiddenMessage" class="all-hidden-message" hidden>表示中の動画がありません。戻すにはページを再読み込みしてください。</p>
+
+    <div id="reviewToolbar" class="review-toolbar">
+      <div class="toolbar-main">
+        <strong id="reviewTimeDisplay">00:00:00</strong>
+        <span id="reviewStateDisplay">停止中</span>
+        <span id="reviewCountDisplay">0本</span>
+        <button id="playAllButton" type="button">全再生</button>
+        <button id="pauseAllButton" type="button">全停止</button>
+        <button id="back5Button" type="button">5秒戻す</button>
+        <button id="forward5Button" type="button">5秒進める</button>
+        <button id="back30Button" type="button">30秒戻す</button>
+        <button id="forward30Button" type="button">30秒進める</button>
+        <button id="resyncButton" type="button">再同期</button>
+        <label for="reviewRateSelect">速度</label>
+        <select id="reviewRateSelect">
+          <option value="05">0.5x</option>
+          <option value="075">0.75x</option>
+          <option value="10" selected>1.0x</option>
+          <option value="125">1.25x</option>
+          <option value="15">1.5x</option>
+          <option value="20">2.0x</option>
+        </select>
+        <button id="muteAllButton" type="button">全ミュート</button>
+        <button id="editSettingsButton" type="button">設定編集</button>
       </div>
-      <div id="modalPlayerHost" class="modal-player-host"></div>
+    </div>
+  </section>
+
+  <div id="expandOverlay" class="expand-overlay" hidden>
+    <div class="expand-shell" role="dialog" aria-modal="true" aria-labelledby="expandTitle">
+      <div class="expand-head">
+        <h2 id="expandTitle">拡大表示</h2>
+        <button id="closeExpandButton" type="button">閉じる</button>
+      </div>
+      <div id="expandHost" class="expand-host"></div>
     </div>
   </div>
 
   <template id="slotTemplate">
-    <article class="video-card">
-      <div class="card-head">
-        <div>
-          <span class="slot-label"></span>
-          <input class="player-name-input" type="text" placeholder="プレイヤー名">
-        </div>
-        <button class="focus-audio-button" type="button">この動画だけ音声ON</button>
-      </div>
-
-      <label> YouTube URL
-        <input class="youtube-url-input" type="url" placeholder="https://www.youtube.com/watch?v=...">
+    <article class="slot-card">
+      <div class="slot-title"></div>
+      <label>YouTube URL
+        <input class="slot-url" type="url" placeholder="https://www.youtube.com/watch?v=...">
       </label>
+      <label>開始位置
+        <input class="slot-start" type="text" inputmode="numeric" placeholder="例: 01:20 / 00:01:20">
+      </label>
+      <p class="slot-status">未入力</p>
+    </article>
+  </template>
 
-      <div class="inline-fields">
-        <label> 個別開始位置
-          <input class="start-time-input" type="text" inputmode="numeric" placeholder="例: 01:23:45">
-        </label>
-        <button class="load-video-button" type="button">動画読み込み</button>
-      </div>
-
-      <div class="player-shell">
-        <div class="player-placeholder">YouTube URLを入力して「動画読み込み」</div>
-        <div class="player-host"></div>
-        <div class="review-overlays" aria-hidden="true">
-          <span class="review-name-label"></span>
-          <span class="review-mute-label"></span>
+  <template id="reviewTileTemplate">
+    <article class="review-tile">
+      <div class="tile-player-shell">
+        <div class="tile-placeholder">読み込み待機中</div>
+        <div class="tile-player"></div>
+        <div class="tile-overlay">
+          <span class="tile-number"></span>
+          <span class="tile-mute">ミュート</span>
         </div>
       </div>
-
-      <div class="card-actions">
-        <button class="mute-toggle-button" type="button">ミュート切替</button>
-        <button class="expand-button" type="button">拡大表示</button>
+      <div class="tile-actions">
+        <button class="tile-audio-button" type="button">音声ON</button>
+        <button class="tile-expand-button" type="button">拡大</button>
+        <button class="tile-hide-button" type="button">非表示</button>
+        <a class="tile-youtube-link" target="_blank" rel="noopener noreferrer">YouTubeで開く</a>
       </div>
-
-      <dl class="status-grid">
-        <div><dt>開始位置</dt><dd class="start-status">00:00:00</dd></div>
-        <div><dt>実再生位置</dt><dd class="actual-time-status">00:00:00</dd></div>
-        <div><dt>ミュート</dt><dd class="mute-status">未読込</dd></div>
-        <div><dt>状態</dt><dd class="load-status">未読込</dd></div>
-      </dl>
-      <p class="error-message" role="status"></p>
+      <p class="tile-error" hidden></p>
     </article>
   </template>
 
