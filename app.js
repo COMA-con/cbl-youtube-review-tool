@@ -684,7 +684,7 @@ function hideTile(tile) {
 }
 
 function activeTiles() {
-  return state.reviewTiles.filter((tile) => !tile.hidden);
+  return state.reviewTiles.filter((tile) => !tile.hidden && tile.card.isConnected);
 }
 
 function controllableTiles() {
@@ -866,27 +866,38 @@ function updateReviewLayout() {
   const rect = elements.reviewGrid.getBoundingClientRect();
   const width = Math.max(1, rect.width);
   const height = Math.max(1, rect.height);
-  let best = { cols: 1, rows: count, tileWidth: width, tileHeight: Math.min(height, width * 9 / 16), area: 0 };
+  const cols = getLayoutColumns(count);
+  const rows = Math.ceil(count / cols);
+  const gap = getReviewGridGap();
+  const availableWidth = Math.max(1, width - gap * (cols - 1));
+  const availableHeight = Math.max(1, height - gap * (rows - 1));
+  let tileWidth = availableWidth / cols;
+  let tileHeight = tileWidth * 9 / 16;
 
-  for (let cols = 1; cols <= count; cols += 1) {
-    const rows = Math.ceil(count / cols);
-    let tileWidth = width / cols;
-    let tileHeight = tileWidth * 9 / 16;
-    if (rows * tileHeight > height) {
-      tileHeight = height / rows;
-      tileWidth = tileHeight * 16 / 9;
-    }
-    const area = tileWidth * tileHeight;
-    const betterArea = area > best.area + 0.5;
-    const betterShape = Math.abs(area - best.area) <= 0.5 && rows < best.rows;
-    if (betterArea || betterShape) {
-      best = { cols, rows, tileWidth, tileHeight, area };
-    }
+  if (tileHeight * rows > availableHeight) {
+    tileHeight = availableHeight / rows;
+    tileWidth = tileHeight * 16 / 9;
   }
 
-  elements.reviewGrid.style.setProperty("--cols", String(best.cols));
-  elements.reviewGrid.style.setProperty("--tile-width", `${Math.floor(best.tileWidth)}px`);
-  elements.reviewGrid.style.setProperty("--tile-height", `${Math.floor(best.tileHeight)}px`);
+  elements.reviewGrid.style.setProperty("--cols", String(cols));
+  elements.reviewGrid.style.setProperty("--tile-width", `${Math.floor(tileWidth)}px`);
+  elements.reviewGrid.style.setProperty("--tile-height", `${Math.floor(tileHeight)}px`);
+}
+
+function getLayoutColumns(count) {
+  if (count <= 1) return 1;
+  if (count === 2) return 2;
+  if (count === 3) return 3;
+  if (count === 4) return 2;
+  if (count <= 9) return 3;
+  if (count <= 12) return 4;
+  return 5;
+}
+
+function getReviewGridGap() {
+  const styles = window.getComputedStyle(elements.reviewGrid);
+  const gap = Number.parseFloat(styles.columnGap || styles.gap || "0");
+  return Number.isFinite(gap) ? gap : 0;
 }
 
 function showToolbarTemporarily() {
