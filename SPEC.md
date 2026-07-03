@@ -129,7 +129,14 @@ https://公開先URL/#r=<URLエンコード済み設定データ>
 - destroy済みの動画
 - レイアウト対象外の動画
 
-グリッド列数はJavaScriptで `repeat(columns, minmax(0, 1fr))` を設定する。動画は16:9を維持し、操作バー分を除いたレビュー画面内でできるだけ大きく表示する。
+JavaScriptで `columns` / `rows` / `tileWidth` / `tileHeight` を計算し、グリッドと各動画カードへ明示的に反映する。
+
+- `reviewGrid.style.gridTemplateColumns`
+- `reviewGrid.style.gridAutoRows`
+- `card.style.width`
+- `card.style.height`
+
+動画は16:9を維持し、操作バー分を除いたレビュー画面内でできるだけ大きく表示する。YouTube iframeの親要素はカード全体に広げ、オーバーレイボタンは動画サイズを決める要素にしない。
 
 固定ルール:
 

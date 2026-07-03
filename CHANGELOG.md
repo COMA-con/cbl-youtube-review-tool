@@ -7,6 +7,8 @@
 - レビュー画面の動画数別レイアウトを固定ルールに修正。1本は1列、2本は2列、3本は3列、4本は2×2、15本は5列×3行で表示。
 - レイアウト計算対象を現在表示中の有効動画だけに限定。非表示化・destroy済みの動画は除外。
 - グリッド列をJavaScriptから `repeat(columns, minmax(0, 1fr))` で設定し、タイルをセル内で16:9最大表示するよう調整。
+- `tileWidth` / `tileHeight` をJavaScriptで計算し、グリッドと各動画カードへ明示サイズとして反映。
+- YouTube iframeの親要素がカード全体に広がるようCSSを補強。
 - 共有URLを開くとレビュー画面へ直行するフローを実装。
 - 共有URLを `#r=` の短い独自形式へ変更。
 - payloadを `encodeURIComponent()` / `decodeURIComponent()` で扱うよう変更。

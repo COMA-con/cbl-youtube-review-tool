@@ -625,6 +625,7 @@ function createOrCuePlayer(tile) {
         tile.player.setPlaybackRate(currentRate());
         tile.player.seekTo(tile.startSeconds + state.reviewTime, true);
         updateReviewUi();
+        updateReviewLayout();
       },
       onStateChange: () => {
         updateReviewTimeFromMaster();
@@ -639,6 +640,7 @@ function createOrCuePlayer(tile) {
         tile.placeholder.textContent = "再生エラー";
         tile.youtubeLink.hidden = false;
         updateReviewUi();
+        updateReviewLayout();
       }
     }
   });
@@ -775,6 +777,7 @@ function closeExpandedTile(restore = true) {
   state.expandedTileId = null;
   elements.expandOverlay.hidden = true;
   updateReviewUi();
+  updateReviewLayout();
 }
 
 function currentRate() {
@@ -859,31 +862,62 @@ function updateReviewLayout() {
   if (state.mode !== "review" || state.expandedTileId) {
     return;
   }
-  const count = activeTiles().length;
+  const tiles = activeTiles();
+  const count = tiles.length;
   if (count === 0) {
     return;
   }
-  const rect = elements.reviewGrid.getBoundingClientRect();
-  const width = Math.max(1, rect.width);
-  const height = Math.max(1, rect.height);
-  const columns = getLayoutColumns(count);
-  const rows = Math.ceil(count / columns);
-  const gap = getReviewGridGap();
-  const availableWidth = Math.max(1, width - gap * (columns - 1));
-  const availableHeight = Math.max(1, height - gap * (rows - 1));
-  let tileWidth = availableWidth / columns;
-  let tileHeight = tileWidth * 9 / 16;
-
-  if (tileHeight * rows > availableHeight) {
-    tileHeight = availableHeight / rows;
-    tileWidth = tileHeight * 16 / 9;
-  }
+  const { columns, rows, tileWidth, tileHeight, gap, containerWidth, containerHeight } = calculateTileSize(count);
 
   elements.reviewGrid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
   elements.reviewGrid.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+  elements.reviewGrid.style.gridAutoRows = `${Math.floor(tileHeight)}px`;
+  elements.reviewGrid.style.gap = `${gap}px`;
+  elements.reviewGrid.style.width = `${Math.floor(containerWidth)}px`;
+  elements.reviewGrid.style.height = `${Math.floor(containerHeight)}px`;
+  elements.reviewGrid.style.justifyContent = "center";
+  elements.reviewGrid.style.alignContent = "center";
   elements.reviewGrid.style.setProperty("--cols", String(columns));
   elements.reviewGrid.style.setProperty("--tile-width", `${Math.floor(tileWidth)}px`);
   elements.reviewGrid.style.setProperty("--tile-height", `${Math.floor(tileHeight)}px`);
+
+  tiles.forEach((tile) => {
+    tile.card.style.width = `${Math.floor(tileWidth)}px`;
+    tile.card.style.height = `${Math.floor(tileHeight)}px`;
+  });
+
+  console.log("[layout]", {
+    activeCount: count,
+    columns,
+    rows,
+    tileWidth: Math.floor(tileWidth),
+    tileHeight: Math.floor(tileHeight)
+  });
+}
+
+function calculateTileSize(count) {
+  const columns = getLayoutColumns(count);
+  const rows = Math.ceil(count / columns);
+  const gap = 8;
+  const reviewModeStyle = window.getComputedStyle(elements.reviewMode);
+  const paddingX = parsePixel(reviewModeStyle.paddingLeft) + parsePixel(reviewModeStyle.paddingRight);
+  const paddingTop = parsePixel(reviewModeStyle.paddingTop);
+  const toolbarHeight = elements.reviewToolbar && !elements.reviewToolbar.hidden ? elements.reviewToolbar.offsetHeight : 0;
+  const warningsHeight = elements.reviewWarnings && !elements.reviewWarnings.hidden ? elements.reviewWarnings.offsetHeight + gap : 0;
+  const safetyPadding = 16;
+  const containerWidth = Math.max(1, window.innerWidth - paddingX);
+  const containerHeight = Math.max(1, window.innerHeight - toolbarHeight - paddingTop - warningsHeight - safetyPadding);
+  const maxTileWidth = (containerWidth - gap * (columns - 1)) / columns;
+  const maxTileHeight = (containerHeight - gap * (rows - 1)) / rows;
+  let tileWidth = maxTileWidth;
+  let tileHeight = tileWidth * 9 / 16;
+
+  if (tileHeight > maxTileHeight) {
+    tileHeight = maxTileHeight;
+    tileWidth = tileHeight * 16 / 9;
+  }
+
+  return { columns, rows, tileWidth, tileHeight, gap, containerWidth, containerHeight };
 }
 
 function getLayoutColumns(count) {
@@ -897,10 +931,9 @@ function getLayoutColumns(count) {
   return 5;
 }
 
-function getReviewGridGap() {
-  const styles = window.getComputedStyle(elements.reviewGrid);
-  const gap = Number.parseFloat(styles.columnGap || styles.gap || "0");
-  return Number.isFinite(gap) ? gap : 0;
+function parsePixel(value) {
+  const number = Number.parseFloat(value);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function showToolbarTemporarily() {
