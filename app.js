@@ -866,12 +866,12 @@ function updateReviewLayout() {
   const rect = elements.reviewGrid.getBoundingClientRect();
   const width = Math.max(1, rect.width);
   const height = Math.max(1, rect.height);
-  const cols = getLayoutColumns(count);
-  const rows = Math.ceil(count / cols);
+  const columns = getLayoutColumns(count);
+  const rows = Math.ceil(count / columns);
   const gap = getReviewGridGap();
-  const availableWidth = Math.max(1, width - gap * (cols - 1));
+  const availableWidth = Math.max(1, width - gap * (columns - 1));
   const availableHeight = Math.max(1, height - gap * (rows - 1));
-  let tileWidth = availableWidth / cols;
+  let tileWidth = availableWidth / columns;
   let tileHeight = tileWidth * 9 / 16;
 
   if (tileHeight * rows > availableHeight) {
@@ -879,7 +879,9 @@ function updateReviewLayout() {
     tileWidth = tileHeight * 16 / 9;
   }
 
-  elements.reviewGrid.style.setProperty("--cols", String(cols));
+  elements.reviewGrid.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+  elements.reviewGrid.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+  elements.reviewGrid.style.setProperty("--cols", String(columns));
   elements.reviewGrid.style.setProperty("--tile-width", `${Math.floor(tileWidth)}px`);
   elements.reviewGrid.style.setProperty("--tile-height", `${Math.floor(tileHeight)}px`);
 }
@@ -889,6 +891,7 @@ function getLayoutColumns(count) {
   if (count === 2) return 2;
   if (count === 3) return 3;
   if (count === 4) return 2;
+  if (count <= 6) return 3;
   if (count <= 9) return 3;
   if (count <= 12) return 4;
   return 5;
