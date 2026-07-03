@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## Ver1.1.1
+
+### Changed
+
+- GitHub Pages の `main` ブランチ root `/` 公開に向けて `.nojekyll` を追加。
+- `index.html` のCSS/JS参照が相対パスであることを維持し、`/cbl-youtube-review-tool/index.html#r=...` 配下でも動く構成を確認。
+- `index.html` の表示文言とHTMLタグ構造を整理し、YouTube URLの例を `DUMMYVIDEOID` に変更。
+- READMEにGitHub Pages公開方法、Discord共有URLの作り方、localhost確認手順を追加。
+- READMEの例をすべてダミーのVideo IDに統一。
+
 ## Ver1.1
 
 ### 変更点

@@ -12,7 +12,7 @@
     <header class="app-header">
       <div>
         <h1>CBL YouTube Review Tool Ver1.1</h1>
-        <p>設定担当者が最大15本のYouTube URLと開始位置を入れて、反省会用の共有URLを作る画面です。</p>
+        <p>最大15本のYouTube URLと開始位置を入力して、反省会用の共有URLを作る画面です。</p>
       </div>
       <div class="header-actions">
         <button id="buildShareUrlButton" type="button">共有URL作成</button>
@@ -56,7 +56,7 @@
         <button id="previewReviewButtonBottom" type="button" hidden>レビュー画面で確認</button>
       </div>
       <label for="shareUrlOutput">共有URL</label>
-      <textarea id="shareUrlOutput" rows="2" readonly placeholder="共有URL作成後にここへ表示されます。"></textarea>
+      <textarea id="shareUrlOutput" rows="2" readonly placeholder="共有URL作成後にここへ表示されます"></textarea>
       <p id="shareResult" class="result-message" role="status"></p>
     </section>
 
@@ -68,7 +68,7 @@
         <label class="file-button" for="importJsonInput">JSON読み込み</label>
         <input id="importJsonInput" type="file" accept="application/json,.json">
       </div>
-      <textarea id="jsonOutput" rows="6" readonly placeholder="JSON出力結果がここに表示されます。"></textarea>
+      <textarea id="jsonOutput" rows="6" readonly placeholder="JSON出力結果がここに表示されます"></textarea>
       <p id="jsonResult" class="result-message" role="status"></p>
     </details>
   </main>
@@ -127,7 +127,7 @@
     <article class="slot-card">
       <div class="slot-title"></div>
       <label>YouTube URL
-        <input class="slot-url" type="url" placeholder="https://www.youtube.com/watch?v=...">
+        <input class="slot-url" type="url" placeholder="https://www.youtube.com/watch?v=DUMMYVIDEOID">
       </label>
       <label>開始位置
         <input class="slot-start" type="text" inputmode="numeric" placeholder="例: 01:20 / 00:01:20">
