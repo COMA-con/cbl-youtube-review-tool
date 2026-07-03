@@ -273,13 +273,13 @@ label {
   inset: 0;
   display: grid;
   grid-template-rows: auto 1fr;
-  gap: 6px;
+  gap: 2px;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
   background: var(--review-bg);
   color: #fff;
-  padding: 8px 8px 70px;
+  padding: 4px 4px 62px;
 }
 
 .review-warnings {
@@ -306,7 +306,7 @@ label {
   align-content: center;
   justify-items: center;
   align-items: center;
-  gap: 7px;
+  gap: 2px;
   box-sizing: border-box;
   min-height: 0;
   overflow: hidden;
@@ -321,7 +321,7 @@ label {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 4px;
   background: #0e151e;
 }

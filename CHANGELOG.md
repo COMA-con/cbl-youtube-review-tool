@@ -9,6 +9,7 @@
 - グリッド列をJavaScriptから `repeat(columns, minmax(0, 1fr))` で設定し、タイルをセル内で16:9最大表示するよう調整。
 - `tileWidth` / `tileHeight` をJavaScriptで計算し、グリッドと各動画カードへ明示サイズとして反映。
 - YouTube iframeの親要素がカード全体に広がるようCSSを補強。
+- レビュー画面の動画間gapを2pxへ圧縮し、外周paddingも減らして動画表示領域を拡大。
 - 共有URLを開くとレビュー画面へ直行するフローを実装。
 - 共有URLを `#r=` の短い独自形式へ変更。
 - payloadを `encodeURIComponent()` / `decodeURIComponent()` で扱うよう変更。

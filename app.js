@@ -898,13 +898,13 @@ function updateReviewLayout() {
 function calculateTileSize(count) {
   const columns = getLayoutColumns(count);
   const rows = Math.ceil(count / columns);
-  const gap = 8;
+  const gap = 2;
   const reviewModeStyle = window.getComputedStyle(elements.reviewMode);
   const paddingX = parsePixel(reviewModeStyle.paddingLeft) + parsePixel(reviewModeStyle.paddingRight);
   const paddingTop = parsePixel(reviewModeStyle.paddingTop);
   const toolbarHeight = elements.reviewToolbar && !elements.reviewToolbar.hidden ? elements.reviewToolbar.offsetHeight : 0;
   const warningsHeight = elements.reviewWarnings && !elements.reviewWarnings.hidden ? elements.reviewWarnings.offsetHeight + gap : 0;
-  const safetyPadding = 16;
+  const safetyPadding = 8;
   const containerWidth = Math.max(1, window.innerWidth - paddingX);
   const containerHeight = Math.max(1, window.innerHeight - toolbarHeight - paddingTop - warningsHeight - safetyPadding);
   const maxTileWidth = (containerWidth - gap * (columns - 1)) / columns;
