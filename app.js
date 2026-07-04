@@ -279,15 +279,19 @@ function validateSettingSlot(slot) {
 
   if (!url) {
     slot.status.textContent = "未入力";
+    slot.status.title = "";
     slot.status.className = "slot-status";
   } else if (!slot.urlValid) {
-    slot.status.textContent = "警告: YouTube Video IDを抽出できません。共有URLから除外します。";
+    slot.status.textContent = "URL確認";
+    slot.status.title = "YouTube URLを確認してください。共有URLには含めません。";
     slot.status.className = "slot-status warning";
   } else if (!slot.startValid) {
-    slot.status.textContent = `OK: ${slot.videoId} / 開始位置は0秒扱い`;
+    slot.status.textContent = "開始位置は00:00扱い";
+    slot.status.title = "開始位置は HH:MM:SS または MM:SS で入力してください。";
     slot.status.className = "slot-status warning";
   } else {
-    slot.status.textContent = `OK: ${slot.videoId} / ${formatTime(slot.startSeconds)}`;
+    slot.status.textContent = "OK";
+    slot.status.title = `Video ID: ${slot.videoId} / 開始位置: ${formatTime(slot.startSeconds)}`;
     slot.status.className = "slot-status ok";
   }
 }
@@ -344,7 +348,7 @@ function collectSettingsForShare() {
 function buildShareUrlFromSettings() {
   const result = collectSettingsForShare();
   if (result.videos.length === 0) {
-    showShareResult("有効なYouTube動画が1本もありません。URLを確認してください。", "warning");
+    showShareResult("有効な動画がありません。\nYouTube URLを確認してください。", "warning");
     elements.copyShareUrlButton.hidden = true;
     elements.previewReviewButtonBottom.hidden = true;
     return null;
@@ -357,17 +361,22 @@ function buildShareUrlFromSettings() {
   elements.copyShareUrlButton.hidden = false;
   elements.previewReviewButtonBottom.hidden = false;
 
-  const lengthLevel = state.shareUrl.length >= 2000 ? "警告" : state.shareUrl.length >= 1500 ? "注意" : "通常";
   const message = [
-    "共有URLを作成しました。",
-    `有効動画: ${result.videos.length}本`,
-    `除外: ${formatSlotList(result.excluded)}`,
-    `開始位置0秒扱い: ${formatSlotList(result.zeroed)}`,
-    `URL長: ${state.shareUrl.length}文字 (${lengthLevel})`
+    "共有URLを作成しました",
+    `有効動画: ${result.videos.length}本`
   ];
+  if (result.excluded.length) {
+    message.push(`除外: ${formatSlotList(result.excluded)}`);
+  }
+  if (result.zeroed.length) {
+    message.push(`開始位置00:00扱い: ${formatSlotList(result.zeroed)}`);
+  }
+  if (state.shareUrl.length >= 2000) {
+    message.push("URLが長めです。Discordで途中で切れないか確認してください。");
+  }
 
   copyText(state.shareUrl).then((copied) => {
-    message.push(copied ? "クリップボードにコピーしました。" : "自動コピーに失敗しました。「共有URLをコピー」ボタンを押してください。");
+    message.push(copied ? "コピー済みです" : "自動コピーに失敗しました。共有URLをコピーを押してください。");
     showShareResult(message.join("\n"), state.shareUrl.length >= 2000 ? "warning" : "ok");
   });
 
@@ -387,7 +396,7 @@ function previewReviewFromSettings() {
   }
   startReview(result.videos, {
     rateCode: result.rateCode,
-    warnings: result.zeroed.length ? [`開始位置が不正な動画を0秒扱いにしました: ${formatSlotList(result.zeroed)}`] : [],
+    warnings: result.zeroed.length ? [`開始位置を00:00扱いにした動画: ${formatSlotList(result.zeroed)}`] : [],
     fromShare: false
   });
 }
@@ -395,11 +404,11 @@ function previewReviewFromSettings() {
 function copyShareUrl() {
   const text = elements.shareUrlOutput.value.trim();
   if (!text) {
-    showShareResult("コピーする共有URLがありません。先に共有URLを作成してください。", "warning");
+    showShareResult("コピーする共有URLがありません。\n先に共有URLを作成してください。", "warning");
     return;
   }
   copyText(text).then((copied) => {
-    showShareResult(copied ? "共有URLをコピーしました。" : "コピーに失敗しました。手動で選択してコピーしてください。", copied ? "ok" : "warning");
+    showShareResult(copied ? "共有URLをコピーしました" : "コピーに失敗しました。手動で選択してコピーしてください。", copied ? "ok" : "warning");
   });
 }
 

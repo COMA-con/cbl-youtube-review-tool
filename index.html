@@ -12,7 +12,7 @@
     <header class="app-header">
       <div>
         <h1>CBL YouTube Review Tool Ver1.1</h1>
-        <p>最大15本のYouTube URLと開始位置を入力して、反省会用の共有URLを作る画面です。</p>
+        <p>大会練習のYouTubeアーカイブを並べて見るためのレビューURL作成フォームです。</p>
       </div>
       <div class="header-actions">
         <button id="buildShareUrlButton" type="button">共有URL作成</button>
@@ -20,20 +20,29 @@
       </div>
     </header>
 
-    <section class="notice-panel" aria-label="重要な注意">
+    <section class="quick-guide" aria-label="使い方">
+      <h2>使い方</h2>
+      <ol>
+        <li>YouTubeアーカイブURLを貼る</li>
+        <li>試合開始位置を入力する</li>
+        <li>共有URLを作成してメンバーに送る</li>
+      </ol>
+      <p>開始位置の例: 01:23 または 01:23:45</p>
+    </section>
+
+    <section class="notice-panel compact-notice" aria-label="注意">
       <ul>
-        <li>共有URLを開いた人は、設定画面を経由せずレビュー画面へ直行します。</li>
-        <li>エラー153を避けるため、index.htmlを直接開かず localhost または公開URLから開いてください。</li>
-        <li>15本同時再生はPCスペック、GPU、メモリ、回線、ブラウザの状態に強く依存します。</li>
-        <li>画質はツール側で一括指定・強制しません。重い場合はYouTubeプレイヤー内の歯車から手動で下げてください。</li>
+        <li>空欄の動画は共有URLに含めません。</li>
+        <li>共有URLを開くとレビュー画面へ直接入ります。</li>
+        <li>15本同時再生が重い場合は、不要な動画を非表示にしてください。</li>
       </ul>
     </section>
 
-    <section class="settings-panel" aria-label="共有URL設定">
+    <section class="settings-panel" aria-label="動画設定">
       <div class="settings-panel-head">
         <div>
           <h2>動画設定</h2>
-          <p>開始位置は HH:MM:SS または MM:SS。秒数のみの入力はVer1.1では警告扱いで0秒になります。</p>
+          <p>動画1〜動画15に、見る動画だけ入力してください。</p>
         </div>
         <label class="rate-field" for="settingsRateSelect">再生速度
           <select id="settingsRateSelect">
@@ -53,7 +62,7 @@
       <div class="share-actions">
         <button id="buildShareUrlButtonBottom" type="button">共有URL作成</button>
         <button id="copyShareUrlButton" type="button" hidden>共有URLをコピー</button>
-        <button id="previewReviewButtonBottom" type="button" hidden>レビュー画面で確認</button>
+        <button id="previewReviewButtonBottom" class="primary-action" type="button" hidden>レビュー画面で確認</button>
       </div>
       <label for="shareUrlOutput">共有URL</label>
       <textarea id="shareUrlOutput" rows="2" readonly placeholder="共有URL作成後にここへ表示されます"></textarea>
@@ -61,8 +70,8 @@
     </section>
 
     <details class="advanced-panel">
-      <summary>詳細機能: JSONバックアップ</summary>
-      <p>通常運用では使いません。設定担当者のバックアップや後日の再編集用です。</p>
+      <summary>詳細機能</summary>
+      <p>通常は使いません。設定のバックアップや後日の再編集用です。</p>
       <div class="share-actions">
         <button id="exportJsonButton" type="button">JSON出力</button>
         <label class="file-button" for="importJsonInput">JSON読み込み</label>
@@ -127,10 +136,10 @@
     <article class="slot-card">
       <div class="slot-title"></div>
       <label>YouTube URL
-        <input class="slot-url" type="url" placeholder="https://www.youtube.com/watch?v=DUMMYVIDEOID">
+        <input class="slot-url" type="url" placeholder="YouTube URLを貼る">
       </label>
       <label>開始位置
-        <input class="slot-start" type="text" inputmode="numeric" placeholder="例: 01:20 / 00:01:20">
+        <input class="slot-start" type="text" inputmode="numeric" placeholder="例: 01:23">
       </label>
       <p class="slot-status">未入力</p>
     </article>
